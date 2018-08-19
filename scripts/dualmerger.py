@@ -232,7 +232,7 @@ for i in range(max(base_gaze)):
             else:
                 cv2.rectangle(frame, (0, 0), (1366, 768), (0, 255, 0), -1)
             font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(frameNew, i.__str__(), (1200, 700), font, 2, (255, 255, 255), 2, cv2.LINE_AA)
+            cv2.putText(frameNew, i.__str__(), (1200, 700), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
             #Draw audiogramm (audio spectre)
             frameWithFooter = cv2.copyMakeBorder(frameNew, 0, 100, 0, 0, cv2.BORDER_CONSTANT, value=(255,255,255))
