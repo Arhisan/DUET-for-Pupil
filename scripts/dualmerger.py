@@ -7,6 +7,7 @@ from gaze_csv_processor import gaze_csv_processor, util
 from audioprocessor import audioprocessor
 import subprocess
 import sys
+import os
 
 m_to_screen={}
 
@@ -77,6 +78,8 @@ try:
 
     with_audio = int(config[1][17]) == 1
     audiogramm_length = float(config[1][18])
+    need_set_of_frames = int(config[1][19]) == 1
+    decomposition_quality = int(config[1][20])
 except:
     print("config.csv is corrupted")
     sys.exit(1)
@@ -167,6 +170,14 @@ def get_nearest_point(points, original_point):
                 break
     return current_answer
 
+def createFolder(directory):
+    try:
+        if not os.path.exists(directory):
+            os.makedirs(directory)
+    except OSError:
+        print('Error: Creating directory. ' + directory)
+
+
 gazes_hist_list_base = []
 gazes_hist_list_second = []
 with open('frames_data.csv', 'w', newline='') as csvfile:
@@ -250,10 +261,20 @@ cap.release()
 out.release()
 if with_audio:
     #cmd = 'ffmpeg -y -i '+video_path_output+' -i '+ audio_path_output + ' -c:v copy -c:a aac -strict experimental -map 0:v:0 -map 1:a:0 '+' dual_'+video_path_output
-    cmd = 'ffmpeg -y -i '+video_path_output+' -i '+ audio_path_output + ' -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 '+' dual_'+video_path_output
-    subprocess.call(cmd)
+    cmd1 = 'ffmpeg -y -i ' + video_path_output + ' -i '+ audio_path_output + ' -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 ' + ' 1fin_'+video_path_output
+    subprocess.call(cmd1)
+
+    cmd2 ="ffmpeg -y -i " + audio_path_output + " -i " + video_path_output + " 2fin_" + video_path_output
+    subprocess.call(cmd2)
     #cmd = 'ffmpeg -y -i ' + video_path_output + ' ./frames%04d.jpg'
     #subprocess.call(cmd)
+
+
+if need_set_of_frames:
+    createFolder('./frames/')
+    cmd_to_extract_frames = 'ffmpeg -i video_result.avi -q:v '+str(decomposition_quality)+' frames/image%d.jpg'
+    subprocess.call(cmd_to_extract_frames)
+    print('Set of frames has been extracted')
 
 print("Done!")
 # os.remove(audio_path_output)
