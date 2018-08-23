@@ -51,6 +51,8 @@ for line in np.array(data)[1:]:
 
 #Gaze data processing
 base_gaze, second_gaze, frame_to_timestamp = gaze_csv_processor.process_gaze_data()
+
+print (frame_to_timestamp)
 try:
     with open('configs.csv', 'r') as f:
         configs_row = list(csv.reader(f, delimiter=','))
@@ -177,6 +179,21 @@ def createFolder(directory):
     except OSError:
         print('Error: Creating directory. ' + directory)
 
+def get_current_spectre_2(spectre, AFdelta, current_frame):
+    end_time = frame_to_timestamp[current_frame] - frame_to_timestamp[0]
+    start_time = end_time - audiogramm_length
+
+    end_interval = int(len(full_spectre) * end_time / duration)
+    start_interval = max(int(len(full_spectre) * start_time / duration), 0)
+
+    AFdelta = audiogramm_length * FPS * len(full_spectre) / len(base_gaze)
+
+    spectre_raw = []
+    for i in range(start_interval, end_interval):
+        spectre_raw.append(np.array([int(1366.0 * (i-start_interval) / AFdelta), int(spectre[i] / spectre_max * 50) + 818]))
+    spectre_formatted = np.array(spectre_raw,np.int32)
+    spectre_formatted = spectre_formatted.reshape((-1, 1, 2))
+    return spectre_formatted
 
 gazes_hist_list_base = []
 gazes_hist_list_second = []
@@ -195,6 +212,7 @@ with open('frames_data.csv', 'w', newline='') as csvfile:
                              'second_x': nearest_second_gaze.x,
                              'second_y': nearest_second_gaze.y})
 
+duration = frame_to_timestamp[max(frame_to_timestamp)]-frame_to_timestamp[0]
 for i in range(max(base_gaze)):
     # Capture frame-by-frame
     ret, frame = cap.read()
@@ -205,12 +223,12 @@ for i in range(max(base_gaze)):
             if i in base_gaze:
                 frameNew = process_frame(frame, m_to_screen[i])
                 for gaze in base_gaze[i]:
-                    if(gaze.x>=0 and gaze.x <= 1 and gaze.y >=0 and gaze.y <=1):
+                    if(gaze.x >= 0 and gaze.x <= 1 and gaze.y >=0 and gaze.y <= 1):
                         gazes_hist_list_base.append(gaze)
                         if len(gazes_hist_list_base) > gazes_limit:
                             gazes_hist_list_base.pop(0)
                 for gaze in second_gaze[i]:
-                    if(gaze.x>=0 and gaze.x <= 1 and gaze.y >=0 and gaze.y <=1):
+                    if(gaze.x >= 0 and gaze.x <= 1 and gaze.y >=0 and gaze.y <= 1):
                         gazes_hist_list_second.append(gaze)
                         if len(gazes_hist_list_second) > gazes_limit:
                             gazes_hist_list_second.pop(0)
@@ -249,8 +267,10 @@ for i in range(max(base_gaze)):
             frameWithFooter = cv2.copyMakeBorder(frameNew, 0, 100, 0, 0, cv2.BORDER_CONSTANT, value=(255,255,255))
             if with_audio:
                 #End of Interval (on the screen)
-                EoI = len(full_spectre) * i / len(base_gaze)
-                cv2.polylines(frameWithFooter, [get_current_spectre(EoI, full_spectre, AFdelta)], False, (0, 0, 255))
+                #EoI = len(full_spectre) * i / len(base_gaze)
+                #cv2.polylines(frameWithFooter, [get_current_spectre(EoI, full_spectre, AFdelta)], False, (0, 0, 255))
+
+                cv2.polylines(frameWithFooter, [get_current_spectre_2(full_spectre, AFdelta, i)], False, (0, 0, 255))
             out.write(frameWithFooter)
     # Break the loop
     else:
