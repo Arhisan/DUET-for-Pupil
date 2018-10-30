@@ -27,14 +27,14 @@ def process_frame(frame,m_to_screen_matrix):
     screen_space[:, 1] = 1 - screen_space[:, 1]
     screen_space[:, 1] *= frame.shape[0]
     screen_space[:, 0] *= frame.shape[1]
-    s_0, s_1 = 1366, 768
+    s_0, s_1 = resolution_x, resolution_y
 
     # flip vertically again setting mapped_space verts accordingly
     mapped_space_scaled = np.array(((0, s_1), (s_0, s_1), (s_0, 0), (0, 0)), dtype=np.float32)
     M = cv2.getPerspectiveTransform(screen_space, mapped_space_scaled)
 
     # perspective transformation
-    srf_in_video = cv2.warpPerspective(frame, M, (int(1366), int(768)))
+    srf_in_video = cv2.warpPerspective(frame, M, (int(resolution_x), int(resolution_y)))
     return srf_in_video
 
 try:
@@ -82,6 +82,9 @@ try:
     audiogramm_length = float(config[1][18])
     need_set_of_frames = int(config[1][19]) == 1
     decomposition_quality = int(config[1][20])
+    resolution_x = int(config[1][21])
+    resolution_y = int(config[1][22])
+
 except:
     print("config.csv is corrupted")
     sys.exit(1)
@@ -102,7 +105,9 @@ cap = cv2.VideoCapture(video_path_input)
 
 video_fps = cap.get(cv2.CAP_PROP_FPS)
 video_path_output =  "video_result.avi"
-out = cv2.VideoWriter(video_path_output, fourcc, video_fps, (1366,868))
+#out = cv2.VideoWriter(video_path_output, fourcc, video_fps, (1366,868))
+out = cv2.VideoWriter(video_path_output, fourcc, video_fps, (resolution_x, resolution_y+100))
+
 if not cap.isOpened():
     print("Error opening video stream or file")
 # Read until video is completed
@@ -123,7 +128,7 @@ def get_current_spectre(EoI, spectre, AFdelta):
     end_interval = int(EoI)
     spectre_raw = []
     for i in range(start_interval, end_interval):
-        spectre_raw.append(np.array([int(1366.0 * (i-start_interval) / AFdelta), int(spectre[i] / spectre_max * 50) + 818]))
+        spectre_raw.append(np.array([int(1.0*resolution_x * (i-start_interval) / AFdelta), int(spectre[i] / spectre_max * 50) + resolution_y +(100/2)]))
     spectre_formatted = np.array(spectre_raw,np.int32)
     spectre_formatted = spectre_formatted.reshape((-1, 1, 2))
     return spectre_formatted
@@ -190,7 +195,7 @@ def get_current_spectre_2(spectre, AFdelta, current_frame):
 
     spectre_raw = []
     for i in range(start_interval, end_interval):
-        spectre_raw.append(np.array([int(1366.0 * (i-start_interval) / AFdelta), int(spectre[i] / spectre_max * 50) + 818]))
+        spectre_raw.append(np.array([int(1.0*resolution_x * (i-start_interval) / AFdelta), int(spectre[i] / spectre_max * 50) + resolution_y+(100/2)]))
     spectre_formatted = np.array(spectre_raw,np.int32)
     spectre_formatted = spectre_formatted.reshape((-1, 1, 2))
     return spectre_formatted
@@ -237,12 +242,12 @@ for i in range(max(base_gaze)):
                 last_gaze = None
                 for current_gaze in reversed(gazes_hist_list_base):
                     if last_gaze != None:
-                        cv2.line(frameNew,  (int(1366 * last_gaze.x), int(768 * (1 - last_gaze.y))),
-                                 (int(1366 * current_gaze.x), int(768 * (1 - current_gaze.y))), base_color, base_width)
+                        cv2.line(frameNew,  (int(resolution_x * last_gaze.x), int(resolution_y * (1 - last_gaze.y))),
+                                 (int(resolution_x * current_gaze.x), int(resolution_y * (1 - current_gaze.y))), base_color, base_width)
                     else:
-                        cv2.circle(frameNew, (int(1366 * current_gaze.x), int(768 * (1 - current_gaze.y))),
+                        cv2.circle(frameNew, (int(resolution_x * current_gaze.x), int(resolution_y * (1 - current_gaze.y))),
                                    int(base_radius * 2), base_color, 3)
-                    cv2.circle(frameNew, (int(1366 * current_gaze.x), int(768 * (1 - current_gaze.y))),
+                    cv2.circle(frameNew, (int(resolution_x * current_gaze.x), int(resolution_y * (1 - current_gaze.y))),
                                int(base_radius), base_color, -1)
                     last_gaze = current_gaze
 
@@ -250,18 +255,18 @@ for i in range(max(base_gaze)):
                 last_gaze = None
                 for current_gaze in reversed(gazes_hist_list_second):
                     if last_gaze != None:
-                        cv2.line(frameNew, (int(1366 * last_gaze.x), int(768 * (1 - last_gaze.y))),
-                                 (int(1366 * current_gaze.x), int(768 * (1 - current_gaze.y))), second_color, second_width)
+                        cv2.line(frameNew, (int(resolution_x * last_gaze.x), int(resolution_y * (1 - last_gaze.y))),
+                                 (int(resolution_x * current_gaze.x), int(resolution_y * (1 - current_gaze.y))), second_color, second_width)
                     else:
-                        cv2.circle(frameNew, (int(1366 * current_gaze.x), int(768 * (1 - current_gaze.y))),
+                        cv2.circle(frameNew, (int(resolution_x * current_gaze.x), int(resolution_y * (1 - current_gaze.y))),
                                    int(second_radius * 2), second_color, 3)
-                    cv2.circle(frameNew, (int(1366 * current_gaze.x), int(768 * (1 - current_gaze.y))),
+                    cv2.circle(frameNew, (int(resolution_x * current_gaze.x), int(resolution_y * (1 - current_gaze.y))),
                                int(second_radius), second_color, -1)
                     last_gaze = current_gaze
             else:
-                cv2.rectangle(frame, (0, 0), (1366, 768), (0, 255, 0), -1)
+                cv2.rectangle(frame, (0, 0), (resolution_x, resolution_y), (0, 255, 0), -1)
             font = cv2.FONT_HERSHEY_SIMPLEX
-            cv2.putText(frameNew, i.__str__(), (1200, 700), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
+            cv2.putText(frameNew, i.__str__(), (int(resolution_x*0.87), int(resolution_y*0.87)), font, 1, (255, 255, 255), 2, cv2.LINE_AA)
 
             #Draw audiogramm (audio spectre)
             frameWithFooter = cv2.copyMakeBorder(frameNew, 0, 100, 0, 0, cv2.BORDER_CONSTANT, value=(255,255,255))
