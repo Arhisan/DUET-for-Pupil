@@ -9,7 +9,7 @@ import subprocess
 import sys
 import os
 
-m_to_screen={}
+m_to_screen = {}
 
 #Requirements
 #import re
@@ -21,6 +21,7 @@ def process_string_matrix(string_matrix):
     return np.array(ast.literal_eval(a))
 
 def process_frame(frame,m_to_screen_matrix):
+
     mapped_space_one = np.array(
         ((0, 0), (1, 0), (1, 1), (0, 1)), dtype=np.float32).reshape(-1, 1, 2)
     screen_space = cv2.perspectiveTransform(mapped_space_one, m_to_screen_matrix).reshape(-1, 2)
@@ -50,8 +51,9 @@ for line in np.array(data)[1:]:
     #m_to_screen.append(process_string_matrix(m_to_screen_string[i]))
 
 #Gaze data processing
-base_gaze, second_gaze, frame_to_timestamp = gaze_csv_processor.process_gaze_data()
-
+base_gaze, second_gaze = gaze_csv_processor.process_gaze_data()
+frame_to_timestamp = np.load("000/world_viz_timestamps.npy")
+duration = frame_to_timestamp[-1]-frame_to_timestamp[0]
 print (frame_to_timestamp)
 try:
     with open('configs.csv', 'r') as f:
@@ -202,6 +204,7 @@ def get_current_spectre_2(spectre, AFdelta, current_frame):
 
 gazes_hist_list_base = []
 gazes_hist_list_second = []
+'''
 with open('frames_data.csv', 'w', newline='') as csvfile:
     fieldnames = ['timestamp','video_frame', 'first_x', 'first_y', 'second_x', 'second_y']
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -216,15 +219,19 @@ with open('frames_data.csv', 'w', newline='') as csvfile:
                              'first_y': current_base_gaze.y,
                              'second_x': nearest_second_gaze.x,
                              'second_y': nearest_second_gaze.y})
-
-duration = frame_to_timestamp[max(frame_to_timestamp)]-frame_to_timestamp[0]
-for i in range(max(base_gaze)):
+'''
+m_to_screen_standart = np.array([[ 0.39129562, -0.01764555,  0.32704431],
+       [ 0.03696206,  0.51439033,  0.2158329 ],
+       [ 0.010974  ,  0.0118955 ,  1.        ]])
+#!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+for i in range(len(frame_to_timestamp)):
     # Capture frame-by-frame
     ret, frame = cap.read()
     if ret: # if ret:
         if i%50==0:
-            print ("Frame ", i," out of ",len(base_gaze)-1)
+            print ("Frame ", i," out of ",len(frame_to_timestamp))
         if i%1==0:
+            frameNew = process_frame(frame, m_to_screen_standart)
             if i in base_gaze:
                 frameNew = process_frame(frame, m_to_screen[i])
                 for gaze in base_gaze[i]:

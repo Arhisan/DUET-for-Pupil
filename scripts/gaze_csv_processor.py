@@ -75,7 +75,7 @@ class gaze_csv_processor:
         for line in np.array(data_base)[1:]:
             base_dict[int(line[1])].append(point(float(line[3]), float(line[4]), float(line[2]), int(line[1])))
 
-        return base_dict, second_dict, {v: k for k, v in timestamp_to_frame.items()}
+        return base_dict, second_dict
 
 
 class util:
