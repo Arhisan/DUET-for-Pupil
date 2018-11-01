@@ -204,7 +204,7 @@ def get_current_spectre_2(spectre, AFdelta, current_frame):
 
 gazes_hist_list_base = []
 gazes_hist_list_second = []
-'''
+
 with open('frames_data.csv', 'w', newline='') as csvfile:
     fieldnames = ['timestamp','video_frame', 'first_x', 'first_y', 'second_x', 'second_y']
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
@@ -219,7 +219,7 @@ with open('frames_data.csv', 'w', newline='') as csvfile:
                              'first_y': current_base_gaze.y,
                              'second_x': nearest_second_gaze.x,
                              'second_y': nearest_second_gaze.y})
-'''
+
 m_to_screen_standart = np.array([[ 0.39129562, -0.01764555,  0.32704431],
        [ 0.03696206,  0.51439033,  0.2158329 ],
        [ 0.010974  ,  0.0118955 ,  1.        ]])
