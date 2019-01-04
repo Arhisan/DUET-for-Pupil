@@ -1,7 +1,7 @@
 # DUET for Pupil
 
 
-**DUET  (DUal Eye-Tracking) for Pupil** - is an independent utility for processing paired Pupil-labs projects. 
+**DUET  (DUal Eye-Tracking) for Pupil** - is an independent utility for processing paired dual eye-tracking [Pupil-labs](https://github.com/pupil-labs/pupil) projects. 
 
 ### Requirements:
 - Python3
@@ -16,7 +16,7 @@
 - config.csv
 
 ## Get Started
-Prepare Pupil-labs projefts created while dual eye-tracking session.
+Prepare Pupil-labs projects created while dual eye-tracking session.
 
 1. Open both projects via Pupil-player and export the desired surface from each.
 2. Extract export folders into one directory (i.e. "dir/") and rename them with "000" and "001" as follows.
