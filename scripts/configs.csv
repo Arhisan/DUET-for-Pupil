@@ -1,2 +1,2 @@
 base_radius,base_line_width,base_color_red,base_color_green,base_color_blue,base_inner_radius,second_radius,second_line_width,second_color_red,second_color_green,second_color_blue,second_inner_radius,gazes_limit,base_gaze_adjustment_x,base_gaze_adjustment_y,second_gaze_adjustment_x,second_gaze_adjustment_y,with_audio,waveform_length,decomposition_to_set_of_frames,frames_quality,resolution_x,resolution_y
-10,3,0,0,255,2,10,3,255,0,0,2,20,0,0,0,0,0,3,1,31,800,800
+10,3,0,0,255,2,10,3,255,0,0,2,20,0,0,0,0,1,3,1,31,800,800

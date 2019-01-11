@@ -82,6 +82,10 @@ class util:
 
     @staticmethod
     def get_fullpath_by_prefix(path_to_search, prefix):
-        return glob.glob(path.join(path_to_search, prefix) + "*")[0]
+        try:
+            return glob.glob(path.join(path_to_search, prefix) + "*")[0]
+        except:
+            print("Surfaces not found")
+            sys.exit(1)
 
 
