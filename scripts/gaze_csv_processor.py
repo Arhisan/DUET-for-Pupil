@@ -6,14 +6,14 @@ import csv
 import sys
 
 
-class point:
-    def __init__(self, x_init, y_init, ts_init, vf_init = 0):
-        self.x = x_init
-        self.y = y_init
-        self.ts = ts_init
-        self.vf = vf_init
+class Point:
+    def __init__(self, x_init: float, y_init: float, ts_init: float, vf_init: int = 0):
+        self.x: float = x_init
+        self.y: float = y_init
+        self.ts: float = ts_init
+        self.vf: int = vf_init
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return "".join(["\nPoint(", str(self.x), ",", str(self.y), ") : time: ", str(self.ts)," frame: ", str(self.vf)])
 
 class gaze_csv_processor:
@@ -70,10 +70,10 @@ class gaze_csv_processor:
 
         for line in data_second[1:]:
             base_frame_number = gaze_csv_processor.get_nearest_frame(timestamp_to_frame, float(line[2]))
-            second_dict[base_frame_number].append(point(float(line[3]), float(line[4]), float(line[2]), base_frame_number))
+            second_dict[base_frame_number].append(Point(float(line[3]), float(line[4]), float(line[2]), base_frame_number))
 
         for line in np.array(data_base)[1:]:
-            base_dict[int(line[1])].append(point(float(line[3]), float(line[4]), float(line[2]), int(line[1])))
+            base_dict[int(line[1])].append(Point(float(line[3]), float(line[4]), float(line[2]), int(line[1])))
 
         return base_dict, second_dict
 

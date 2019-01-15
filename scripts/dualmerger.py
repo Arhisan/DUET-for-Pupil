@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
+from typing import List, Set, Dict, Tuple, Optional
 import cv2
 import numpy as np
 import re, ast
 import csv
-from gaze_csv_processor import gaze_csv_processor, util, point
+from gaze_csv_processor import gaze_csv_processor, util, Point
 from audioprocessor import audioprocessor
 import subprocess
 import sys
@@ -16,7 +17,7 @@ m_to_screen = {}
 # import re
 # import ast
 
-def process_string_matrix(string_matrix):
+def process_string_matrix(string_matrix: str) -> np.array:
     a = re.sub('\s+', ',', string_matrix)
     a = re.sub('\[,', '[', a)
     return np.array(ast.literal_eval(a))
@@ -67,27 +68,27 @@ config = np.array(configs_row)
 
 # Config
 try:
-    base_radius = int(config[1][0])
-    base_width = int(config[1][1])
-    base_color = (int(config[1][2]), int(config[1][3]), int(config[1][4]))
-    base_inner = int(config[1][5])
+    base_radius:    int = int(config[1][0])
+    base_width:     int = int(config[1][1])
+    base_color:     (int, int, int) = (int(config[1][2]), int(config[1][3]), int(config[1][4]))
+    base_inner:     int = int(config[1][5])
 
-    second_radius = int(config[1][6])
-    second_width = int(config[1][7])
-    second_color = (int(config[1][8]), int(config[1][9]), int(config[1][10]))
-    second_inner = int(config[1][11])
+    second_radius:  int = int(config[1][6])
+    second_width:   int = int(config[1][7])
+    second_color:   (int, int, int) = (int(config[1][8]), int(config[1][9]), int(config[1][10]))
+    second_inner:   int = int(config[1][11])
 
-    gazes_limit = int(config[1][12])
+    gazes_limit:    int = int(config[1][12])
 
-    base_gaze_adjustment = (float(config[1][13]), float(config[1][14]))
-    second_gaze_adjustment = (float(config[1][15]), float(config[1][16]))
+    base_gaze_adjustment:   (float, float) = (float(config[1][13]), float(config[1][14]))
+    second_gaze_adjustment: (float, float) = (float(config[1][15]), float(config[1][16]))
 
-    with_audio = int(config[1][17]) == 1
-    audiogramm_length = float(config[1][18])
-    need_set_of_frames = int(config[1][19]) == 1
-    decomposition_quality = int(config[1][20])
-    resolution_x = int(config[1][21])
-    resolution_y = int(config[1][22])
+    with_audio:             bool = int(config[1][17]) == 1
+    audiogramm_length:      float = float(config[1][18])
+    need_set_of_frames:     bool = int(config[1][19]) == 1
+    decomposition_quality:  int = int(config[1][20])
+    resolution_x:           int = int(config[1][21])
+    resolution_y:           int = int(config[1][22])
 
 except:
     print("config.csv is corrupted")
@@ -119,7 +120,7 @@ if not cap.isOpened():
 # Read until video is completed
 
 
-def reduce_spectre(spectre, n):
+def reduce_spectre(spectre: List[int], n: int) -> List[int]:
     reduced_spectre = []
     for i in range(0, int(len(full_spectre) / n)):
         sum = 0
@@ -129,7 +130,7 @@ def reduce_spectre(spectre, n):
     return reduced_spectre
 
 
-def get_current_spectre(EoI, spectre, AFdelta):
+def get_current_spectre(EoI, spectre, AFdelta) -> np.array:
     start_interval = max(int(EoI - AFdelta), 0)
     end_interval = int(EoI)
     spectre_raw = []
@@ -164,7 +165,7 @@ if with_audio:
     right = len(full_spectre)
 
 
-def get_nearest_point(points, original_point: point) -> point:
+def get_nearest_point(points, original_point: Point) -> Point:
     last_delta = 9999999
     current_answer = None
     # for point in points[original_point.vf]:
@@ -194,26 +195,26 @@ def create_folder(directory: str) -> None:
         print('Error: Creating directory. ' + directory)
 
 
-def get_current_spectre_2(spectre, AFdelta, current_frame):
-    end_time = frame_to_timestamp[current_frame] - frame_to_timestamp[0]
-    start_time = end_time - audiogramm_length
+def get_current_spectre_2(spectre: List[int], current_frame: int) -> np.array:
+    end_time:   float = frame_to_timestamp[current_frame] - frame_to_timestamp[0]
+    start_time: float = end_time - audiogramm_length
 
-    end_interval = int(len(full_spectre) * end_time / duration)
-    start_interval = max(int(len(full_spectre) * start_time / duration), 0)
+    end_interval:   int = int(len(full_spectre) * end_time / duration)
+    start_interval: int = max(int(len(full_spectre) * start_time / duration), 0)
 
-    AFdelta = audiogramm_length * FPS * len(full_spectre) / len(base_gaze)
+    AFdelta: float = audiogramm_length * FPS * len(full_spectre) / len(base_gaze)
 
-    spectre_raw = []
+    spectre_raw: List[np.array] = []
     for i in range(start_interval, end_interval):
         spectre_raw.append(np.array([int(1.0 * resolution_x * (i - start_interval) / AFdelta),
                                      int(spectre[i] / spectre_max * 50) + resolution_y + (100 / 2)]))
-    spectre_formatted = np.array(spectre_raw, np.int32)
-    spectre_formatted = spectre_formatted.reshape((-1, 1, 2))
+    spectre_formatted: np.array = np.array(spectre_raw, np.int32).reshape((-1, 1, 2))
+   # spectre_formatted = spectre_formatted.reshape((-1, 1, 2))
     return spectre_formatted
 
 
-gazes_hist_list_base = []
-gazes_hist_list_second = []
+gazes_hist_list_base:   List[Point] = []
+gazes_hist_list_second: List[Point] = []
 
 with open('frames_data.csv', 'w', newline='') as csvfile:
     fieldnames = ['timestamp', 'video_frame', 'first_x', 'first_y', 'second_x', 'second_y']
@@ -230,11 +231,11 @@ with open('frames_data.csv', 'w', newline='') as csvfile:
                              'second_x': nearest_second_gaze.x,
                              'second_y': nearest_second_gaze.y})
 
-m_to_screen_standart = np.array([[0.39129562, -0.01764555, 0.32704431],
-                                 [0.03696206, 0.51439033, 0.2158329],
-                                 [0.010974, 0.0118955, 1.]])
+m_to_screen_standard = np.array([[0.39129562, -0.01764555, 0.32704431],
+                                 [0.03696206,   0.51439033, 0.2158329],
+                                 [0.010974,     0.0118955,  1.0000000]])
+
 # !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-print(base_gaze)
 for i in range(len(frame_to_timestamp)):
     # Capture frame-by-frame
     ret, frame = cap.read()
@@ -243,10 +244,10 @@ for i in range(len(frame_to_timestamp)):
         if i % 50 == 0:
             print("Frame ", i, " out of ", len(frame_to_timestamp))
         if i % 1 == 0:
-            frameNew = process_frame(frame, m_to_screen_standart)
+            frameNew = None
             if i in base_gaze:
                 frameNew = process_frame(frame, m_to_screen[i])
-                gaze: point
+                gaze: Point
                 for gaze in base_gaze[i]:
                     if 0 <= gaze.x and gaze.x <= 1 and 0 <= gaze.y and gaze.y <= 1:
                         gazes_hist_list_base.append(gaze)
@@ -292,7 +293,8 @@ for i in range(len(frame_to_timestamp)):
                                int(second_radius), second_color, -1)
                     last_gaze = current_gaze
             else:
-                cv2.rectangle(frame, (0, 0), (resolution_x, resolution_y), (0, 255, 0), -1)
+                #cv2.rectangle(frame, (0, 0), (resolution_x, resolution_y), (0, 255, 0), -1)
+                frameNew = process_frame(frame, m_to_screen_standard)
             font = cv2.FONT_HERSHEY_SIMPLEX
             cv2.putText(frameNew, i.__str__(), (int(resolution_x * 0.87), int(resolution_y * 0.87)), font, 1,
                         (255, 255, 255), 2, cv2.LINE_AA)
@@ -304,7 +306,7 @@ for i in range(len(frame_to_timestamp)):
                 # EoI = len(full_spectre) * i / len(base_gaze)
                 # cv2.polylines(frameWithFooter, [get_current_spectre(EoI, full_spectre, AFdelta)], False, (0, 0, 255))
 
-                cv2.polylines(frameWithFooter, [get_current_spectre_2(full_spectre, AFdelta, i)], False, (0, 0, 255))
+                cv2.polylines(frameWithFooter, [get_current_spectre_2(full_spectre, i)], False, (0, 0, 255))
             out.write(frameWithFooter)
     # Break the loop
     else:
@@ -315,7 +317,6 @@ cap.release()
 out.release()
 if with_audio:
     # cmd = 'ffmpeg -y -i '+video_path_output+' -i '+ audio_path_output + ' -c:v copy -c:a aac -strict experimental -map 0:v:0 -map 1:a:0 '+' dual_'+video_path_output
-
     # cmd1 = 'ffmpeg -y -i ' + video_path_output + ' -i '+ audio_path_output + ' -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 ' + ' 1fin_'+video_path_output
     # subprocess.call(cmd1)
     subprocess.call(
