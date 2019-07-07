@@ -155,7 +155,7 @@ if with_audio:
     full_spectre = reduce_spectre(full_spectre, 100)
     print("lenght of reduced full_spectre ", len(full_spectre))
     FPS = video_fps
-    AFPF = len(full_spectre) / len(base_gaze)
+    AFPF = len(full_spectre) / len(frame_to_timestamp)
     delta = audiogramm_length
     AFdelta = delta * FPS * AFPF
 
@@ -202,7 +202,7 @@ def get_current_spectre_2(spectre: List[int], current_frame: int) -> np.array:
     end_interval:   int = int(len(full_spectre) * end_time / duration)
     start_interval: int = max(int(len(full_spectre) * start_time / duration), 0)
 
-    AFdelta: float = audiogramm_length * FPS * len(full_spectre) / len(base_gaze)
+    AFdelta: float = audiogramm_length * FPS * len(full_spectre) / len(frame_to_timestamp)
 
     spectre_raw: List[np.array] = []
     for i in range(start_interval, end_interval):
@@ -241,7 +241,7 @@ for i in range(len(frame_to_timestamp)):
     ret, frame = cap.read()
     if ret:
         # Processing notifications
-        if i % 50 == 0:
+        if i % 20 == 0:
             print("Frame ", i, " out of ", len(frame_to_timestamp))
         if i % 1 == 0:
             frameNew = None
@@ -317,15 +317,15 @@ cap.release()
 out.release()
 if with_audio:
     # cmd = 'ffmpeg -y -i '+video_path_output+' -i '+ audio_path_output + ' -c:v copy -c:a aac -strict experimental -map 0:v:0 -map 1:a:0 '+' dual_'+video_path_output
-    # cmd1 = 'ffmpeg -y -i ' + video_path_output + ' -i '+ audio_path_output + ' -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 ' + ' 1fin_'+video_path_output
-    # subprocess.call(cmd1)
-    subprocess.call(
-        ['ffmpeg', '-y', '-i', video_path_input, '-i', audio_path_output, '-c:v', 'copy', '-c:a', 'acc', '-map',
-         '0:v:0', '-map', '1:a:0', 'high_quality_with_audio_' + video_path_output])
+    cmd1 = 'ffmpeg -y -i ' + video_path_output + ' -i '+ audio_path_output + ' -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 ' + ' 1fin_'+video_path_output
+    subprocess.call(cmd1)
+    #subprocess.call(
+    #    ['ffmpeg', '-y', '-i', video_path_input, '-i', audio_path_output, '-c:v', 'copy', '-c:a', 'acc', '-map',
+    #     '0:v:0', '-map', '1:a:0', 'high_quality_with_audio_' + video_path_output])
 
     # cmd2 ="ffmpeg -y -i " + audio_path_output + " -i " + video_path_output + " low_quality_with_audio_" + video_path_output
     # subprocess.call(cmd2)
-    subprocess.call(['ffmpeg', '-y', '-i', audio_path_output, '-i', video_path_input,
+    subprocess.call(['ffmpeg', '-y', '-i', audio_path_output, '-i', video_path_output,
                      'low_quality_with_audio_' + video_path_output])
     # cmd = 'ffmpeg -y -i ' + video_path_output + ' ./frames%04d.jpg'
     # subprocess.call(cmd)
