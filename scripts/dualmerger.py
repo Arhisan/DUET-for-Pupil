@@ -105,7 +105,7 @@ for plist in second_gaze.values():
         p.y += second_gaze_adjustment[1]
 
 fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-video_path_input = "./000/world_viz.mp4"
+video_path_input = "./000/world.mp4"
 cap = cv2.VideoCapture(video_path_input)
 
 video_fps = cap.get(cv2.CAP_PROP_FPS)
