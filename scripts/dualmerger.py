@@ -9,6 +9,7 @@ from audioprocessor import audioprocessor
 import subprocess
 import sys
 import os
+import json
 
 m_to_screen = {}
 
@@ -55,7 +56,7 @@ for line in np.array(data)[1:]:
 
 # Gaze data processing
 base_gaze, second_gaze = gaze_csv_processor.process_gaze_data()
-frame_to_timestamp = np.load("000/world_viz_timestamps.npy")
+frame_to_timestamp = np.load("000/world_timestamps.npy")
 duration = frame_to_timestamp[-1] - frame_to_timestamp[0]
 print(frame_to_timestamp)
 try:
@@ -67,33 +68,42 @@ except OSError as e:
 config = np.array(configs_row)
 
 # Config
-try:
-    base_radius:    int = int(config[1][0])
-    base_width:     int = int(config[1][1])
-    base_color:     (int, int, int) = (int(config[1][2]), int(config[1][3]), int(config[1][4]))
-    base_inner:     int = int(config[1][5])
+with open('config.json') as config_file:
+    cfg = json.load(config_file)
 
-    second_radius:  int = int(config[1][6])
-    second_width:   int = int(config[1][7])
-    second_color:   (int, int, int) = (int(config[1][8]), int(config[1][9]), int(config[1][10]))
-    second_inner:   int = int(config[1][11])
+    marker = cfg.get("marker")
 
-    gazes_limit:    int = int(config[1][12])
+    base_color = marker.get("base_color")
+    base_gaze_adjustment = marker.get("base_gaze_adjustment")
+    second_color = marker.get("second_color")
+    second_gaze_adjustment = marker.get("second_gaze_adjustment")
+    output_resolution = cfg.get("output_resolution")
 
-    base_gaze_adjustment:   (float, float) = (float(config[1][13]), float(config[1][14]))
-    second_gaze_adjustment: (float, float) = (float(config[1][15]), float(config[1][16]))
+    base_radius: int = int(marker.get("base_radius"))
+    base_width: int = int(marker.get("base_line_width"))
+    base_color: (int, int, int) = (int(base_color.get("r")), int(base_color.get("g")), int(base_color.get("b")))
+    base_inner: int = int(marker.get("base_inner_radius"))
+    base_gaze_adjustment: (float, float) = (float(base_gaze_adjustment.get("x")), float(base_gaze_adjustment.get("y")))
 
-    with_audio:             bool = int(config[1][17]) == 1
-    audiogramm_length:      float = float(config[1][18])
-    need_set_of_frames:     bool = int(config[1][19]) == 1
-    decomposition_quality:  int = int(config[1][20])
-    resolution_x:           int = int(config[1][21])
-    resolution_y:           int = int(config[1][22])
+    second_radius: int = int(marker.get("second_radius"))
+    second_width: int = int(marker.get("second_line_width"))
+    second_color: (int, int, int) = (int(second_color.get("r")), int(second_color.get("g")), int(second_color.get("b")))
+    second_inner: int = int(marker.get("second_inner_radius"))
+    second_gaze_adjustment: (float, float) = (float(second_gaze_adjustment.get("x")), float(second_gaze_adjustment.get("y")))
 
-except:
-    print("config.csv is corrupted")
-    sys.exit(1)
 
+    gazes_limit: int = int(marker.get("gazes_limit"))
+
+
+    with_audio: bool = int(cfg.get("with_audio")) == 1
+    audiogramm_length: float = float(cfg.get("waveform_length"))
+    need_set_of_frames: bool = int(cfg.get("decomposition_to_set_of_frames")) == 1
+    decomposition_quality: int = int(cfg.get("frames_quality"))
+    resolution_x: int = int(output_resolution.get("x"))
+    resolution_y: int = int(output_resolution.get("y"))
+
+
+print(with_audio)
 for plist in base_gaze.values():
     for p in plist:
         p.x += base_gaze_adjustment[0]

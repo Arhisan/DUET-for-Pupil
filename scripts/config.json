@@ -1,0 +1,46 @@
+{
+  "marker": {
+    "base_radius": 10,
+    "base_line_width": 3,
+    "base_color":
+    {
+      "r": 0,
+      "g": 0,
+      "b": 255
+    },
+    "base_inner_radius": 2,
+    "base_gaze_adjustment":
+    {
+      "x": 0,
+      "y": 0
+    },
+    "second_radius": 10,
+    "second_line_width": 3,
+    "second_color":
+    {
+      "r": 255,
+      "g": 0,
+      "b": 0
+    },
+    "second_inner_radius": 2,
+    "gazes_limit": 20,
+    "second_gaze_adjustment":
+    {
+      "x": 0,
+      "y": 0
+    }
+  },
+  "with_audio": false,
+  "waveform_length": 3,
+  "decomposition_to_set_of_frames": true,
+  "frames_quality": 31,
+  "output_resolution":
+  {
+    "x": 800,
+    "y": 800
+  },
+  "paths":
+  {
+
+  }
+}
