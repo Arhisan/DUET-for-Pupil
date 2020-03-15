@@ -41,6 +41,9 @@ def process_frame(frame, m_to_screen_matrix):
     srf_in_video = cv2.warpPerspective(frame, M, (int(resolution_x), int(resolution_y)))
     return srf_in_video
 
+ats = np.load('./000/audio_timestamps.npy')
+np.savetxt("foo.csv", ats, delimiter=",")
+print(ats)
 
 try:
     with open(util.get_fullpath_by_prefix('./000/surfaces/', 'srf_positons'), 'r') as f:
@@ -56,54 +59,59 @@ for line in np.array(data)[1:]:
 
 # Gaze data processing
 base_gaze, second_gaze = gaze_csv_processor.process_gaze_data()
+base_gaze_flatten = np.array(base_gaze.values()).flatten()
+second_gaze_flatten = np.array(second_gaze.values()).flatten()
+
 frame_to_timestamp = np.load("000/world_timestamps.npy")
 duration = frame_to_timestamp[-1] - frame_to_timestamp[0]
 print(frame_to_timestamp)
+
+# Config
+
 try:
-    with open('configs.csv', 'r') as f:
-        configs_row = list(csv.reader(f, delimiter=','))
+    with open('config.json') as config_file:
+        cfg = json.load(config_file)
+
+        marker = cfg.get("marker")
+
+        base_color = marker.get("base_color")
+        base_gaze_adjustment = marker.get("base_gaze_adjustment")
+        second_color = marker.get("second_color")
+        second_gaze_adjustment = marker.get("second_gaze_adjustment")
+        output_resolution = cfg.get("output_resolution")
+
+        base_radius:                int = int(marker.get("base_radius"))
+        base_width:                 int = int(marker.get("base_line_width"))
+        base_color:                 (int, int, int) = (int(base_color.get("r")), int(base_color.get("g")), int(base_color.get("b")))
+        base_inner:                 int = int(marker.get("base_inner_radius"))
+        base_gaze_adjustment:       (float, float) = (float(base_gaze_adjustment.get("x")), float(base_gaze_adjustment.get("y")))
+
+        second_radius:              int = int(marker.get("second_radius"))
+        second_width:               int = int(marker.get("second_line_width"))
+        second_color:               (int, int, int) = (int(second_color.get("r")), int(second_color.get("g")), int(second_color.get("b")))
+        second_inner:               int = int(marker.get("second_inner_radius"))
+        second_gaze_adjustment:     (float, float) = (float(second_gaze_adjustment.get("x")), float(second_gaze_adjustment.get("y")))
+
+        gazes_limit:                int = int(marker.get("gazes_limit"))
+
+        with_audio:                 bool = int(cfg.get("with_audio")) == 1
+        audiogramm_length:          float = float(cfg.get("waveform_length"))
+        need_set_of_frames:         bool = int(cfg.get("decomposition_to_set_of_frames")) == 1
+        decomposition_quality:      int = int(cfg.get("frames_quality"))
+        resolution_x:               int = int(output_resolution.get("x"))
+        resolution_y:               int = int(output_resolution.get("y"))
+
+        paths = cfg.get("paths")
+        base_dir:                   str = paths.get("base_dir", "./000")
+        second_dir:                 str = paths.get("second_dir", "./001")
+        video_path_input:           str = paths.get("video_path", "./000/world.mp4")
+        outer_audio_path:           str = paths.get("outer_audio_path")
+        outer_audio_timestamp_path: str = paths.get("outer_audio_timestamp_path")
+
 except OSError as e:
     print("Configuration file not found, ", e.filename)
     sys.exit(1)
-config = np.array(configs_row)
 
-# Config
-with open('config.json') as config_file:
-    cfg = json.load(config_file)
-
-    marker = cfg.get("marker")
-
-    base_color = marker.get("base_color")
-    base_gaze_adjustment = marker.get("base_gaze_adjustment")
-    second_color = marker.get("second_color")
-    second_gaze_adjustment = marker.get("second_gaze_adjustment")
-    output_resolution = cfg.get("output_resolution")
-
-    base_radius: int = int(marker.get("base_radius"))
-    base_width: int = int(marker.get("base_line_width"))
-    base_color: (int, int, int) = (int(base_color.get("r")), int(base_color.get("g")), int(base_color.get("b")))
-    base_inner: int = int(marker.get("base_inner_radius"))
-    base_gaze_adjustment: (float, float) = (float(base_gaze_adjustment.get("x")), float(base_gaze_adjustment.get("y")))
-
-    second_radius: int = int(marker.get("second_radius"))
-    second_width: int = int(marker.get("second_line_width"))
-    second_color: (int, int, int) = (int(second_color.get("r")), int(second_color.get("g")), int(second_color.get("b")))
-    second_inner: int = int(marker.get("second_inner_radius"))
-    second_gaze_adjustment: (float, float) = (float(second_gaze_adjustment.get("x")), float(second_gaze_adjustment.get("y")))
-
-
-    gazes_limit: int = int(marker.get("gazes_limit"))
-
-
-    with_audio: bool = int(cfg.get("with_audio")) == 1
-    audiogramm_length: float = float(cfg.get("waveform_length"))
-    need_set_of_frames: bool = int(cfg.get("decomposition_to_set_of_frames")) == 1
-    decomposition_quality: int = int(cfg.get("frames_quality"))
-    resolution_x: int = int(output_resolution.get("x"))
-    resolution_y: int = int(output_resolution.get("y"))
-
-
-print(with_audio)
 for plist in base_gaze.values():
     for p in plist:
         p.x += base_gaze_adjustment[0]
@@ -115,7 +123,6 @@ for plist in second_gaze.values():
         p.y += second_gaze_adjustment[1]
 
 fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-video_path_input = "./000/world.mp4"
 cap = cv2.VideoCapture(video_path_input)
 
 video_fps = cap.get(cv2.CAP_PROP_FPS)
@@ -128,7 +135,6 @@ if not cap.isOpened():
 
 
 # Read until video is completed
-
 
 def reduce_spectre(spectre: List[int], n: int) -> List[int]:
     reduced_spectre = []
@@ -155,7 +161,12 @@ def get_current_spectre(EoI, spectre, AFdelta) -> np.array:
 audio_path_output = "audio_from_world_viz.wav"
 if with_audio:
     # Get audio from  world_viz
-    subprocess.call(['ffmpeg', '-y', '-i', video_path_input, '-codec:a', 'pcm_s16le', '-ac', '1', audio_path_output])
+    if outer_audio_path is not None:
+        print("Using outer audio source:%s\n", outer_audio_path)
+        subprocess.call(['ffmpeg', '-y', '-i', outer_audio_path, '-codec:a', 'pcm_s16le', '-ac', '1', audio_path_output])
+    else:
+        print("Using audio from video\n")
+        subprocess.call(['ffmpeg', '-y', '-i', video_path_input, '-codec:a', 'pcm_s16le', '-ac', '1', audio_path_output])
     # cmd = 'ffmpeg -y -i ' + video_path_input + ' -codec:a pcm_s16le -ac 1' + audio_path_output
     # subprocess.call(cmd)
     ap = audioprocessor(audio_path_output)
@@ -234,6 +245,7 @@ with open('frames_data.csv', 'w', newline='') as csvfile:
         # print(base_gazes_frame)
         for current_base_gaze in base_gazes_frame:
             nearest_second_gaze = get_nearest_point(second_gaze, current_base_gaze)
+            nearest_second_gaze = get_nearest_point(second_gaze_flatten, current_base_gaze)
             writer.writerow({'timestamp': current_base_gaze.ts,
                              'video_frame': current_base_gaze.vf,
                              'first_x': current_base_gaze.x,

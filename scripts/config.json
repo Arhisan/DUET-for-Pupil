@@ -30,7 +30,7 @@
       "y": 0
     }
   },
-  "with_audio": false,
+  "with_audio": true,
   "waveform_length": 3,
   "decomposition_to_set_of_frames": true,
   "frames_quality": 31,
@@ -41,6 +41,10 @@
   },
   "paths":
   {
-
+    "base_dir": "./000",
+    "second_dir": "./001",
+    "video_path": "./000/world.mp4",
+    "outer_audio_path": "./000/audio.mp4",
+    "outer_audio_timestamp_path": "./000/audio_timestamps.npy"
   }
 }
