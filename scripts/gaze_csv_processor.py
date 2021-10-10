@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import glob
-from os import path
+import os
 import csv
 import sys
 
@@ -12,6 +12,14 @@ class Point:
         self.y: float = y_init
         self.ts: float = ts_init
         self.vf: int = vf_init
+
+    def __lt__(self, other):
+        if self.ts == other.ts:
+            return self.ts < other.ts
+        return self.ts < other.ts
+
+    def __gt__(self, other):
+        return other.__lt__(self)
 
     def __repr__(self) -> str:
         return "".join(["\nPoint(", str(self.x), ",", str(self.y), ") : time: ", str(self.ts)," frame: ", str(self.vf)])
@@ -32,17 +40,17 @@ class gaze_csv_processor:
         return currentanswer
 
     @staticmethod
-    def process_gaze_data():
+    def process_gaze_data(path0: str, path1: str):
         # Open all the files required
         # get_fullpath_by_prefix('./002/surfaces/','srf_positons')
         try:
-            with open(util.get_fullpath_by_prefix('./000/surfaces/', 'srf_positons'), 'r') as f:
+            with open(util.get_fullpath_by_prefix(path0, 'srf_positons'), 'r') as f:
                 data_frames = list(csv.reader(f, delimiter=','))
 
-            with open(util.get_fullpath_by_prefix('./000/surfaces/', 'gaze_positions_on_surface'), 'r') as f:
+            with open(util.get_fullpath_by_prefix(path0, 'gaze_positions_on_surface'), 'r') as f:
                 data_base = list(csv.reader(f, delimiter=','))
 
-            with open(util.get_fullpath_by_prefix('./001/surfaces/', 'gaze_positions_on_surface'), 'r') as f:
+            with open(util.get_fullpath_by_prefix(path1, 'gaze_positions_on_surface'), 'r') as f:
                 data_second = list(csv.reader(f, delimiter=','))
         except IndexError as e:
             print("One of the exported files not found")
@@ -83,9 +91,9 @@ class util:
     @staticmethod
     def get_fullpath_by_prefix(path_to_search, prefix):
         try:
-            return glob.glob(path.join(path_to_search, prefix) + "*")[0]
-        except:
-            print("Surfaces not found")
+            path = os.path.join(path_to_search, prefix)
+            print (path, glob.glob(path))
+            return glob.glob(os.path.join(path_to_search, prefix) + "*")[0]
+        except Exception as e:
+            print("Surfaces not found\n", e)
             sys.exit(1)
-
-

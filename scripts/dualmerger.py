@@ -1,18 +1,21 @@
 # -*- coding: utf-8 -*-
+from bisect import bisect_left
 from typing import List, Set, Dict, Tuple, Optional
 import cv2
 import numpy as np
 import re, ast
 import csv
 from gaze_csv_processor import gaze_csv_processor, util, Point
-from audioprocessor import audioprocessor
+from audioprocessor import AudioProcessor
 import subprocess
 import sys
 import os
 import json
 
-m_to_screen = {}
+from library import get_nearest_point
 
+m_to_screen = {}
+exposed_dir = "data"
 
 # Requirements
 # import re
@@ -41,35 +44,10 @@ def process_frame(frame, m_to_screen_matrix):
     srf_in_video = cv2.warpPerspective(frame, M, (int(resolution_x), int(resolution_y)))
     return srf_in_video
 
-ats = np.load('./000/audio_timestamps.npy')
-np.savetxt("foo.csv", ats, delimiter=",")
-print(ats)
-
-try:
-    with open(util.get_fullpath_by_prefix('./000/surfaces/', 'srf_positons'), 'r') as f:
-        data = list(csv.reader(f, delimiter=','))
-except OSError as e:
-    print("One of the files not found, details ", e.filename)
-    sys.exit(1)
-m_to_screen_string = np.array(data).T[2]
-for line in np.array(data)[1:]:
-    m_to_screen[int(line[0])] = process_string_matrix(line[2])
-# for i in range(1,len(m_to_screen_string)-1):
-# m_to_screen.append(process_string_matrix(m_to_screen_string[i]))
-
-# Gaze data processing
-base_gaze, second_gaze = gaze_csv_processor.process_gaze_data()
-base_gaze_flatten = np.array(base_gaze.values()).flatten()
-second_gaze_flatten = np.array(second_gaze.values()).flatten()
-
-frame_to_timestamp = np.load("000/world_timestamps.npy")
-duration = frame_to_timestamp[-1] - frame_to_timestamp[0]
-print(frame_to_timestamp)
-
 # Config
 
 try:
-    with open('config.json') as config_file:
+    with open(os.path.join(exposed_dir, 'config.json')) as config_file:
         cfg = json.load(config_file)
 
         marker = cfg.get("marker")
@@ -102,15 +80,38 @@ try:
         resolution_y:               int = int(output_resolution.get("y"))
 
         paths = cfg.get("paths")
-        base_dir:                   str = paths.get("base_dir", "./000")
-        second_dir:                 str = paths.get("second_dir", "./001")
-        video_path_input:           str = paths.get("video_path", "./000/world.mp4")
+        base_dir:                   str = paths.get("base_dir", "000")
+        second_dir:                 str = paths.get("second_dir", "001")
+        video_path_input:           str = paths.get("video_path", "000/world.mp4")
         outer_audio_path:           str = paths.get("outer_audio_path")
         outer_audio_timestamp_path: str = paths.get("outer_audio_timestamp_path")
 
 except OSError as e:
     print("Configuration file not found, ", e.filename)
     sys.exit(1)
+
+try:
+    path = os.path.join(exposed_dir, base_dir, 'surfaces/')
+    print (path)
+    with open(util.get_fullpath_by_prefix(path, 'srf_positons'), 'r') as f:
+        data = list(csv.reader(f, delimiter=','))
+except OSError as e:
+    print("One of the files not found, details ", e.filename)
+    sys.exit(1)
+m_to_screen_string = np.array(data).T[2]
+for line in np.array(data)[1:]:
+    m_to_screen[int(line[0])] = process_string_matrix(line[2])
+# for i in range(1,len(m_to_screen_string)-1):
+# m_to_screen.append(process_string_matrix(m_to_screen_string[i]))
+
+# Gaze data processing
+base_gaze, second_gaze = gaze_csv_processor.process_gaze_data(path0=os.path.join(exposed_dir,base_dir,'surfaces/'), path1 = os.path.join(exposed_dir,second_dir,'surfaces/'))
+base_gaze_flatten = np.array(base_gaze.values()).flatten()
+second_gaze_flatten = np.array(second_gaze.values()).flatten()
+
+frame_to_timestamp = np.load(os.path.join(exposed_dir, base_dir, 'world_timestamps.npy'))
+duration = frame_to_timestamp[-1] - frame_to_timestamp[0]
+print(frame_to_timestamp)
 
 for plist in base_gaze.values():
     for p in plist:
@@ -123,10 +124,11 @@ for plist in second_gaze.values():
         p.y += second_gaze_adjustment[1]
 
 fourcc = cv2.VideoWriter_fourcc(*'MJPG')
-cap = cv2.VideoCapture(video_path_input)
+cap = cv2.VideoCapture(os.path.join(exposed_dir, video_path_input))
 
 video_fps = cap.get(cv2.CAP_PROP_FPS)
-video_path_output = "video_result.avi"
+video_path_output_base = "video_result.avi"
+video_path_output = os.path.join(exposed_dir, video_path_output_base)
 # out = cv2.VideoWriter(video_path_output, fourcc, video_fps, (1366,868))
 out = cv2.VideoWriter(video_path_output, fourcc, video_fps, (resolution_x, resolution_y + 100))
 
@@ -157,19 +159,20 @@ def get_current_spectre(EoI, spectre, AFdelta) -> np.array:
     spectre_formatted = spectre_formatted.reshape((-1, 1, 2))
     return spectre_formatted
 
+audio_path_output_base = "audio_from_world_viz.wav"
+audio_path_output = os.path.join(exposed_dir, audio_path_output_base)
 
-audio_path_output = "audio_from_world_viz.wav"
 if with_audio:
     # Get audio from  world_viz
     if outer_audio_path is not None:
         print("Using outer audio source:%s\n", outer_audio_path)
-        subprocess.call(['ffmpeg', '-y', '-i', outer_audio_path, '-codec:a', 'pcm_s16le', '-ac', '1', audio_path_output])
+        subprocess.call(['ffmpeg', '-y', '-i', os.path.join(exposed_dir, outer_audio_path), '-codec:a', 'pcm_s16le', '-ac', '1', audio_path_output])
     else:
         print("Using audio from video\n")
         subprocess.call(['ffmpeg', '-y', '-i', video_path_input, '-codec:a', 'pcm_s16le', '-ac', '1', audio_path_output])
     # cmd = 'ffmpeg -y -i ' + video_path_input + ' -codec:a pcm_s16le -ac 1' + audio_path_output
     # subprocess.call(cmd)
-    ap = audioprocessor(audio_path_output)
+    ap = AudioProcessor(audio_path_output)
     full_spectre = ap.get_spectrum()
 
     print("lenght of full_spectre ", len(full_spectre))
@@ -184,28 +187,6 @@ if with_audio:
     # spectre_raw = []
     left = 0
     right = len(full_spectre)
-
-
-def get_nearest_point(points, original_point: Point) -> Point:
-    last_delta = 9999999
-    current_answer = None
-    # for point in points[original_point.vf]:
-    #     delta = abs(original_point.ts-point.ts)
-    #     if delta < last_delta:
-    #         last_delta = delta
-    #         current_answer = point
-    #     elif delta > last_delta:
-    #         break
-    # return current_answer
-    for point_list in points.values():
-        for point in point_list:
-            delta = abs(original_point.ts - point.ts)
-            if delta < last_delta:
-                last_delta = delta
-                current_answer = point
-            elif delta > last_delta:
-                break
-    return current_answer
 
 
 def create_folder(directory: str) -> None:
@@ -237,15 +218,22 @@ def get_current_spectre_2(spectre: List[int], current_frame: int) -> np.array:
 gazes_hist_list_base:   List[Point] = []
 gazes_hist_list_second: List[Point] = []
 
-with open('frames_data.csv', 'w', newline='') as csvfile:
+with open(os.path.join(exposed_dir, 'frames_data.csv'), 'w', newline='') as csvfile:
     fieldnames = ['timestamp', 'video_frame', 'first_x', 'first_y', 'second_x', 'second_y']
     writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
     writer.writeheader()
+    # let's create helping flattened second_gaze
+    second_gaze_flattened = []
+    for points in second_gaze.values():
+        for point in points:
+            second_gaze_flattened.append(point)
+    second_gaze_flattened.sort(key=lambda x: x.ts)
+    # end of flattened second_gaze creation
+
     for k, base_gazes_frame in base_gaze.items():
         # print(base_gazes_frame)
         for current_base_gaze in base_gazes_frame:
-            nearest_second_gaze = get_nearest_point(second_gaze, current_base_gaze)
-            nearest_second_gaze = get_nearest_point(second_gaze_flatten, current_base_gaze)
+            nearest_second_gaze = get_nearest_point(second_gaze_flattened, current_base_gaze)
             writer.writerow({'timestamp': current_base_gaze.ts,
                              'video_frame': current_base_gaze.vf,
                              'first_x': current_base_gaze.x,
@@ -337,10 +325,16 @@ for i in range(len(frame_to_timestamp)):
 # When everything done, release the video capture object
 cap.release()
 out.release()
+
 if with_audio:
     # cmd = 'ffmpeg -y -i '+video_path_output+' -i '+ audio_path_output + ' -c:v copy -c:a aac -strict experimental -map 0:v:0 -map 1:a:0 '+' dual_'+video_path_output
-    cmd1 = 'ffmpeg -y -i ' + video_path_output + ' -i '+ audio_path_output + ' -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 ' + ' 1fin_'+video_path_output
-    subprocess.call(cmd1)
+    #cmd1 = 'ffmpeg -y -i ' + video_path_output + ' -i '+ audio_path_output + ' -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 ' + ' ' + os.path.join(exposed_dir, '1fin_' + video_path_output_base)
+    #subprocess.call(cmd1)
+
+    subprocess.call(
+        ['ffmpeg', '-y', '-i', video_path_output, '-i', audio_path_output, '-c:v', 'copy', '-c:a', 'acc', '-map',
+         '0:v:0', '-map', '1:a:0', os.path.join(exposed_dir, '1fin_' + video_path_output_base)])
+
     #subprocess.call(
     #    ['ffmpeg', '-y', '-i', video_path_input, '-i', audio_path_output, '-c:v', 'copy', '-c:a', 'acc', '-map',
     #     '0:v:0', '-map', '1:a:0', 'high_quality_with_audio_' + video_path_output])
@@ -348,18 +342,18 @@ if with_audio:
     # cmd2 ="ffmpeg -y -i " + audio_path_output + " -i " + video_path_output + " low_quality_with_audio_" + video_path_output
     # subprocess.call(cmd2)
     subprocess.call(['ffmpeg', '-y', '-i', audio_path_output, '-i', video_path_output,
-                     'low_quality_with_audio_' + video_path_output])
+                     os.path.join(exposed_dir, 'low_quality_with_audio_' + video_path_output_base)])
     # cmd = 'ffmpeg -y -i ' + video_path_output + ' ./frames%04d.jpg'
     # subprocess.call(cmd)
 
 if need_set_of_frames:
-    create_folder('frames')
+    create_folder(os.path.join(exposed_dir,'frames'))
     subprocess.call(
-        ['ffmpeg', '-i', 'video_result.avi', '-q:v', str(decomposition_quality), os.path.join('frames', 'image%d.jpg')])
+        ['ffmpeg', '-i', os.path.join(exposed_dir,'video_result.avi'), '-q:v', str(decomposition_quality), os.path.join(exposed_dir, 'frames', 'image%d.jpg')])
     # cmd_to_extract_frames = 'ffmpeg -i video_result.avi -q:v '+str(decomposition_quality)+' frames/image%d.jpg'
     # subprocess.call(cmd_to_extract_frames)
     print('Set of frames has been extracted')
-os.remove(video_path_output)
+#os.remove(video_path_output)
 print("Done!")
 # os.remove(audio_path_output)
 # os.remove(video_path_output)
