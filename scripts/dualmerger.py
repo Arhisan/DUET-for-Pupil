@@ -24,8 +24,13 @@ exposed_dir = "data"
 def process_string_matrix(string_matrix: str) -> np.array:
     a = re.sub('\s+', ',', string_matrix)
     a = re.sub('\[,', '[', a)
-    return np.array(ast.literal_eval(a))
-
+    try:
+        return np.array(ast.literal_eval(a))
+    except ValueError:
+        print(f"Error value in matrix {a}, nan's replaced with 1.")
+        a = re.sub('nan', '1.', a)
+        return np.array(ast.literal_eval(a)) 
+        
 
 def process_frame(frame, m_to_screen_matrix):
     mapped_space_one = np.array(
